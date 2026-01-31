@@ -3,6 +3,7 @@ import { runSync } from '@/lib/sync-service';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 function validateCronSecret(request: NextRequest): boolean {
   const cronSecret = process.env.CRON_SECRET;
