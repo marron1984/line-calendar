@@ -1,31 +1,27 @@
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { createClient } from '@libsql/client';
+import { drizzle } from 'drizzle-orm/libsql';
 import { eq } from 'drizzle-orm';
 import * as schema from './schema';
-import path from 'path';
-import fs from 'fs';
 
-const dbPath = process.env.DATABASE_PATH || path.join(process.cwd(), 'data', 'sync.db');
-const dbDir = path.dirname(dbPath);
+const client = createClient({
+  url: process.env.TURSO_DATABASE_URL!,
+  authToken: process.env.TURSO_AUTH_TOKEN,
+});
 
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
+export const db = drizzle(client, { schema });
+
+// Initialize table (run once on first deployment)
+export async function initializeDatabase() {
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS event_maps (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      lw_event_id TEXT NOT NULL UNIQUE,
+      google_event_id TEXT NOT NULL,
+      lw_updated_at TEXT NOT NULL,
+      last_synced_at INTEGER NOT NULL
+    )
+  `);
 }
-
-const sqlite = new Database(dbPath);
-
-// Create table if not exists
-sqlite.exec(`
-  CREATE TABLE IF NOT EXISTS event_maps (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    lw_event_id TEXT NOT NULL UNIQUE,
-    google_event_id TEXT NOT NULL,
-    lw_updated_at TEXT NOT NULL,
-    last_synced_at INTEGER NOT NULL
-  )
-`);
-
-export const db = drizzle(sqlite, { schema });
 
 export async function getEventMap(lwEventId: string) {
   const results = await db
