@@ -1,4 +1,4 @@
-import { prisma } from './prisma';
+import { getEventMap, upsertEventMap } from '@/db';
 import { getConfig } from './config';
 import { fetchLineWorksSchedules, LineWorksSchedule } from './lineworks-client';
 import { createGoogleEvent, updateGoogleEvent, GoogleEventInput } from './google-client';
@@ -75,22 +75,17 @@ export async function runSync(): Promise<SyncResult> {
         continue;
       }
 
-      const existingMapping = await prisma.eventMap.findUnique({
-        where: { lwEventId },
-      });
+      const existingMapping = await getEventMap(lwEventId);
 
       if (!existingMapping) {
         const googleEvent = convertToGoogleEvent(schedule);
         const googleEventId = await createGoogleEvent(googleEvent, lwEventId);
 
-        await prisma.eventMap.create({
-          data: {
-            lwEventId,
-            googleEventId,
-            lwUpdatedAt: schedule.updatedTime || new Date().toISOString(),
-            lastSyncedAt: new Date(),
-          },
-        });
+        await upsertEventMap(
+          lwEventId,
+          googleEventId,
+          schedule.updatedTime || new Date().toISOString()
+        );
 
         console.log(`[SYNC] Created: ${schedule.summary} (${lwEventId})`);
         result.created++;
@@ -98,13 +93,11 @@ export async function runSync(): Promise<SyncResult> {
         const googleEvent = convertToGoogleEvent(schedule);
         await updateGoogleEvent(existingMapping.googleEventId, googleEvent, lwEventId);
 
-        await prisma.eventMap.update({
-          where: { lwEventId },
-          data: {
-            lwUpdatedAt: schedule.updatedTime,
-            lastSyncedAt: new Date(),
-          },
-        });
+        await upsertEventMap(
+          lwEventId,
+          existingMapping.googleEventId,
+          schedule.updatedTime
+        );
 
         console.log(`[SYNC] Updated: ${schedule.summary} (${lwEventId})`);
         result.updated++;
