@@ -1,19 +1,30 @@
 # Dependencies
 node_modules/
 
+# Next.js build output
+.next/
+out/
+
 # Build output
 dist/
 
 # Environment
 .env
 .env.local
+.env.*.local
 
 # Database
 data/
 *.db
+*.db-journal
+
+# Prisma
+prisma/*.db
+prisma/*.db-journal
 
 # Logs
 *.log
+npm-debug.log*
 
 # IDE
 .idea/
@@ -24,3 +35,10 @@ data/
 # OS
 .DS_Store
 Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Vercel
+.vercel
